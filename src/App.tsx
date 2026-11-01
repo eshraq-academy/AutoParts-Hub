@@ -1,176 +1,382 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Search, ShoppingCart, Menu, Wrench,
-  ShieldCheck, Truck, Headphones, ArrowLeft,
-  CarFront, Settings, ChevronLeft
+  Search,
+  ShoppingCart,
+  Menu,
+  Wrench,
+  ShieldCheck,
+  Truck,
+  Headphones,
+  ArrowLeft,
+  CarFront,
+  Settings,
+  ChevronLeft,
+  Package,
+  Plus,
+  CheckCircle2
 } from 'lucide-react';
 
-const categories = [
-  'كل القطع',
-  'المحركات',
-  'الفرامل',
-  'الفلاتر',
-  'الكهرباء',
-  'التعليق'
-];
+import { products } from './data/products';
+import { vehicles } from './data/vehicles';
 
-const products = [
-  { id: 1, name: 'فلتر زيت عالي الجودة', code: 'OIL-2045', price: 450, category: 'الفلاتر', icon: '🛢️' },
-  { id: 2, name: 'تيل فرامل أمامي', code: 'BRK-1020', price: 1250, category: 'الفرامل', icon: '⚙️' },
-  { id: 3, name: 'شمعة إشعال أصلية', code: 'SPK-3010', price: 320, category: 'الكهرباء', icon: '🔩' },
-  { id: 4, name: 'مساعد أمامي', code: 'SUS-4050', price: 2800, category: 'التعليق', icon: '🔧' }
-];
-
-export default function App() {
+function App() {
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('كل القطع');
-  const [cart, setCart] = useState(0);
+  const [category, setCategory] = useState('الكل');
+  const [selectedCar, setSelectedCar] = useState('');
+  const [cartCount, setCartCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const filteredProducts = products.filter(product => {
-    const matchesSearch =
-      product.name.includes(search) ||
-      product.code.toLowerCase().includes(search.toLowerCase());
+  const categories = [
+    'الكل',
+    ...Array.from(new Set(products.map((product) => product.category)))
+  ];
 
-    const matchesCategory =
-      activeCategory === 'كل القطع' ||
-      product.category === activeCategory;
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const searchText = search.trim().toLowerCase();
 
-    return matchesSearch && matchesCategory;
-  });
+      const matchesSearch =
+        !searchText ||
+        product.name.toLowerCase().includes(searchText) ||
+        product.nameEn.toLowerCase().includes(searchText) ||
+        product.sku.toLowerCase().includes(searchText) ||
+        product.oem.toLowerCase().includes(searchText);
+
+      const matchesCategory =
+        category === 'الكل' || product.category === category;
+
+      const matchesCar =
+        !selectedCar || product.compatibleCars.includes(selectedCar);
+
+      return matchesSearch && matchesCategory && matchesCar;
+    });
+  }, [search, category, selectedCar]);
+
+  const addToCart = () => {
+    setCartCount((count) => count + 1);
+  };
 
   return (
     <div className="app" dir="rtl">
+
+      {/* Navigation */}
       <header className="navbar">
-        <a className="brand" href="#">
-          <span className="brand-icon"><Wrench /></span>
-          <span>AutoParts<span className="orange">Hub</span></span>
-        </a>
+        <div className="container nav-container">
 
-        <nav className="nav-links">
-          <a href="#home">الرئيسية</a>
-          <a href="#products">قطع الغيار</a>
-          <a href="#services">خدماتنا</a>
-          <a href="#about">من نحن</a>
-        </nav>
+          <a href="#" className="logo">
+            <span className="logo-icon">
+              <Wrench size={25} />
+            </span>
+            <span>
+              AutoParts <strong>Hub</strong>
+            </span>
+          </a>
 
-        <div className="nav-actions">
-          <button className="cart-button" onClick={() => alert(`عدد المنتجات في السلة: ${cart}`)}>
-            <ShoppingCart />
-            <span>السلة ({cart})</span>
+          <button
+            className="mobile-menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="فتح القائمة"
+          >
+            <Menu size={25} />
           </button>
-          <button className="menu-button"><Menu /></button>
+
+          <nav className={menuOpen ? 'nav-links active' : 'nav-links'}>
+            <a href="#">الرئيسية</a>
+            <a href="#products">قطع الغيار</a>
+            <a href="#about">من نحن</a>
+            <a href="#contact">تواصل معنا</a>
+          </nav>
+
+          <div className="nav-actions">
+            <button className="cart-button">
+              <ShoppingCart size={21} />
+              <span>السلة</span>
+              <span className="cart-count">{cartCount}</span>
+            </button>
+          </div>
+
         </div>
       </header>
 
-      <main>
-        <section className="hero" id="home">
-          <div className="hero-content">
-            <span className="eyebrow">وجهتك الأولى لقطع غيار السيارات</span>
-            <h1>كل قطعة تحتاجها<br /> لسيارتك <span>في مكان واحد.</span></h1>
+      {/* Hero */}
+      <section className="hero">
+        <div className="container hero-content">
+
+          <div className="hero-text">
+            <span className="hero-badge">
+              <CheckCircle2 size={16} />
+              وجهتك الموثوقة لقطع غيار السيارات
+            </span>
+
+            <h1>
+              كل قطع غيار سيارتك
+              <span> في مكان واحد</span>
+            </h1>
+
             <p>
-              اكتشف مجموعة واسعة من قطع الغيار الأصلية
-              والموثوقة، بجودة تستحق ثقتك.
+              اكتشف مجموعة متنوعة من قطع الغيار الأصلية
+              وعالية الجودة، وابحث عن القطعة المناسبة لسيارتك بسهولة.
             </p>
 
-            <a className="primary-button" href="#products">
-              اكتشف المنتجات <ArrowLeft size={18} />
+            <a href="#products" className="primary-button">
+              اكتشف المنتجات
+              <ArrowLeft size={19} />
             </a>
-
-            <div className="hero-stats">
-              <div><strong>+5000</strong><small>قطعة غيار</small></div>
-              <div><strong>+1200</strong><small>عميل سعيد</small></div>
-              <div><strong>100%</strong><small>اهتمام بالجودة</small></div>
-            </div>
           </div>
 
           <div className="hero-visual">
-            <div className="visual-circle">
-              <CarFront size={150} strokeWidth={1} />
-              <span className="floating-icon"><Settings /></span>
+            <div className="hero-icon">
+              <CarFront size={115} />
             </div>
-            <div className="visual-caption">
-              <ShieldCheck />
-              <span>اختيار موثوق لسيارتك</span>
+            <div className="hero-floating-card">
+              <ShieldCheck size={25} />
+              <span>جودة وموثوقية</span>
             </div>
           </div>
-        </section>
 
-        <section className="benefits" id="services">
-          <div><Truck /><span><b>توصيل سريع</b><small>لحد باب بيتك</small></span></div>
-          <div><ShieldCheck /><span><b>جودة موثوقة</b><small>قطع مختارة بعناية</small></span></div>
-          <div><Headphones /><span><b>دعم ومساعدة</b><small>نساعدك تختار الصح</small></span></div>
-        </section>
+        </div>
+      </section>
 
-        <section className="products-section" id="products">
-          <div className="section-heading">
+      {/* Benefits */}
+      <section className="benefits">
+        <div className="container benefits-grid">
+
+          <div className="benefit-item">
+            <ShieldCheck size={30} />
             <div>
-              <span className="eyebrow">تسوق بسهولة</span>
-              <h2>اكتشف قطع الغيار</h2>
+              <h3>جودة موثوقة</h3>
+              <p>قطع غيار بمواصفات واضحة</p>
             </div>
-            <span className="products-count">{filteredProducts.length} منتجات</span>
           </div>
 
+          <div className="benefit-item">
+            <Truck size={30} />
+            <div>
+              <h3>سهولة الطلب</h3>
+              <p>تصفح المنتجات بسهولة</p>
+            </div>
+          </div>
+
+          <div className="benefit-item">
+            <Headphones size={30} />
+            <div>
+              <h3>دعم العملاء</h3>
+              <p>نساعدك في اختيار القطعة</p>
+            </div>
+          </div>
+
+          <div className="benefit-item">
+            <Settings size={30} />
+            <div>
+              <h3>توافق السيارات</h3>
+              <p>ابحث حسب نوع سيارتك</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Products */}
+      <section className="products-section" id="products">
+        <div className="container">
+
+          <div className="section-heading">
+            <span>تسوق بسهولة</span>
+            <h2>اكتشف قطع الغيار</h2>
+            <p>ابحث عن القطعة المناسبة لسيارتك من مجموعتنا</p>
+          </div>
+
+          {/* Search */}
           <div className="search-box">
-            <Search />
+            <Search size={22} />
             <input
+              type="text"
+              placeholder="ابحث باسم القطعة أو SKU أو رقم OEM..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="ابحث باسم القطعة أو رقم OEM..."
+              onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
+          {/* Vehicle Filter */}
+          <div className="vehicle-filter">
+            <div className="vehicle-filter-title">
+              <CarFront size={24} />
+              <div>
+                <h3>ابحث حسب سيارتك</h3>
+                <p>اعرض قطع الغيار المتوافقة مع سيارتك</p>
+              </div>
+            </div>
+
+            <select
+              value={selectedCar}
+              onChange={(e) => setSelectedCar(e.target.value)}
+            >
+              <option value="">كل السيارات</option>
+              {vehicles.map((car) => (
+                <option key={car.id} value={car.id}>
+                  {car.brand} {car.model} - {car.year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Categories */}
           <div className="categories">
-            {categories.map(category => (
+            {categories.map((item) => (
               <button
-                key={category}
-                className={activeCategory === category ? 'active' : ''}
-                onClick={() => setActiveCategory(category)}
+                key={item}
+                className={category === item ? 'category active' : 'category'}
+                onClick={() => setCategory(item)}
               >
-                {category}
+                {item}
               </button>
             ))}
           </div>
 
-          <div className="product-grid">
-            {filteredProducts.map(product => (
+          {/* Product Count */}
+          <div className="products-header">
+            <h3>المنتجات المتاحة</h3>
+            <span>{filteredProducts.length} منتجات</span>
+          </div>
+
+          {/* Product Cards */}
+          <div className="products-grid">
+            {filteredProducts.map((product) => (
               <article className="product-card" key={product.id}>
-                <div className="product-image">{product.icon}</div>
-                <span className="product-code">{product.code}</span>
-                <h3>{product.name}</h3>
-                <div className="product-bottom">
-                  <strong>{product.price.toLocaleString('en-US')} ج.م</strong>
-                  <button onClick={() => setCart(cart + 1)} aria-label="أضف للسلة">
-                    <ShoppingCart size={18} />
-                  </button>
+
+                <div className="product-image">
+                  {product.image ? (
+                    <img src={product.image} alt={product.name} />
+                  ) : (
+                    <Package size={65} />
+                  )}
+
+                  {product.featured && (
+                    <span className="product-badge">مميز</span>
+                  )}
                 </div>
+
+                <div className="product-info">
+                  <span className="product-category">
+                    {product.category}
+                  </span>
+
+                  <h3>{product.name}</h3>
+
+                  <p className="product-description">
+                    {product.description}
+                  </p>
+
+                  <div className="product-details">
+                    <span>SKU: {product.sku}</span>
+                    <span>OEM: {product.oem}</span>
+                  </div>
+
+                  <div className="product-stock">
+                    {product.stock > 0
+                      ? `متوفر: ${product.stock} قطعة`
+                      : 'غير متوفر'}
+                  </div>
+
+                  <div className="product-footer">
+                    <div className="product-price">
+                      <strong>
+                        {product.price.toLocaleString('en-US')} ج.م
+                      </strong>
+
+                      {product.oldPrice && (
+                        <del>
+                          {product.oldPrice.toLocaleString('en-US')} ج.م
+                        </del>
+                      )}
+                    </div>
+
+                    <button
+                      className="add-cart-button"
+                      onClick={addToCart}
+                      disabled={product.stock <= 0}
+                      aria-label="إضافة إلى السلة"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                </div>
+
               </article>
             ))}
-            {filteredProducts.length === 0 && (
-              <p className="empty-state">مفيش منتجات مطابقة للبحث.</p>
-            )}
           </div>
 
-          <a className="more-link" href="#products">
-            عرض كل المنتجات <ChevronLeft size={18} />
-          </a>
-        </section>
+          {filteredProducts.length === 0 && (
+            <div className="empty-products">
+              <Search size={40} />
+              <h3>لم نعثر على منتجات</h3>
+              <p>جربي تغيير كلمات البحث أو اختيار تصنيف آخر.</p>
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setCategory('الكل');
+                  setSelectedCar('');
+                }}
+              >
+                عرض كل المنتجات
+              </button>
+            </div>
+          )}
 
-        <section className="about-section" id="about">
-          <div>
-            <span className="eyebrow">AutoParts Hub</span>
-            <h2>ثقتك تبدأ من اختيار القطعة الصح.</h2>
-            <p>منصة متخصصة لتسهيل الوصول إلى قطع غيار السيارات ومساعدتك في اختيار ما يناسب سيارتك.</p>
-          </div>
-        </section>
-      </main>
-
-      <footer>
-        <div className="brand">
-          <span className="brand-icon"><Wrench /></span>
-          <span>AutoParts<span className="orange">Hub</span></span>
         </div>
-        <p>© 2026 AutoParts Hub - جميع الحقوق محفوظة</p>
+      </section>
+
+      {/* About */}
+      <section className="about-section" id="about">
+        <div className="container about-content">
+
+          <div className="about-icon">
+            <Wrench size={75} />
+          </div>
+
+          <div>
+            <span>من نحن</span>
+            <h2>AutoParts Hub</h2>
+            <p>
+              منصة متخصصة في عرض قطع غيار السيارات،
+              ومساعدة العملاء في الوصول إلى المنتجات
+              المناسبة لسياراتهم بسهولة.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="footer" id="contact">
+        <div className="container footer-content">
+
+          <div>
+            <h2>AutoParts Hub</h2>
+            <p>كل ما تحتاجه سيارتك في مكان واحد.</p>
+          </div>
+
+          <div>
+            <h3>روابط سريعة</h3>
+            <a href="#">الرئيسية</a>
+            <a href="#products">المنتجات</a>
+            <a href="#about">من نحن</a>
+          </div>
+
+          <div>
+            <h3>تواصل معنا</h3>
+            <p>يسعدنا استقبال استفساراتكم</p>
+          </div>
+
+        </div>
+
+        <div className="footer-bottom">
+          © 2026 AutoParts Hub - جميع الحقوق محفوظة
+        </div>
       </footer>
+
     </div>
   );
 }
+
+export default App;
