@@ -1,0 +1,80 @@
+import type { Product } from '../types';
+
+export const products: Product[] = [
+  {
+    id: 'p-001',
+    name: 'فلتر زيت تويوتا كورولا',
+    nameEn: 'Toyota Corolla Oil Filter',
+    sku: 'OIL-2045',
+    oem: '90915-YZZE1',
+    description: 'فلتر زيت عالي الجودة لمحركات تويوتا.',
+    price: 450,
+    oldPrice: 520,
+    stock: 25,
+    category: 'الفلاتر',
+    brand: 'Toyota',
+    compatibleCars: ['car-001', 'car-002'],
+    image: '',
+    featured: true
+  },
+  {
+    id: 'p-002',
+    name: 'تيل فرامل أمامي',
+    nameEn: 'Front Brake Pads',
+    sku: 'BRK-1020',
+    oem: '04465-02390',
+    description: 'تيل فرامل بأداء موثوق وثبات عالي.',
+    price: 1250,
+    stock: 18,
+    category: 'الفرامل',
+    brand: 'Toyota',
+    compatibleCars: ['car-001', 'car-002'],
+    image: '',
+    featured: true
+  },
+  {
+    id: 'p-003',
+    name: 'شمعة إشعال هيونداي',
+    nameEn: 'Hyundai Spark Plug',
+    sku: 'SPK-3010',
+    oem: '18855-10060',
+    description: 'شمعة إشعال لمحركات هيونداي.',
+    price: 320,
+    stock: 40,
+    category: 'الكهرباء',
+    brand: 'Hyundai',
+    compatibleCars: ['car-003'],
+    image: '',
+    featured: true
+  },
+  {
+    id: 'p-004',
+    name: 'فلتر هواء نيسان صني',
+    nameEn: 'Nissan Sunny Air Filter',
+    sku: 'AIR-4010',
+    oem: '16546-4BA1A',
+    description: 'فلتر هواء للمساعدة في تحسين تدفق الهواء للمحرك.',
+    price: 380,
+    stock: 30,
+    category: 'الفلاتر',
+    brand: 'Nissan',
+    compatibleCars: ['car-004'],
+    image: '',
+    featured: false
+  },
+  {
+    id: 'p-005',
+    name: 'مساعد أمامي كيا سيراتو',
+    nameEn: 'Kia Cerato Front Shock Absorber',
+    sku: 'SUS-4050',
+    oem: '54651-1M000',
+    description: 'مساعد أمامي لتحسين ثبات السيارة.',
+    price: 2800,
+    stock: 12,
+    category: 'التعليق',
+    brand: 'Kia',
+    compatibleCars: ['car-005'],
+    image: '',
+    featured: true
+  }
+];
