@@ -1,101 +1,40 @@
-
 import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import {
   Search, ShoppingCart, Menu, X, Plus, Minus, Trash2,
   Car, ShieldCheck, Truck, Headphones, Wrench, Package,
-  Heart, ChevronDown, ArrowLeft, CircleCheck, Send
+  Heart, ChevronDown, ArrowLeft, CircleCheck, Send,
+  Eye, Hash, Tag, AlertCircle
 } from "lucide-react";
 
-type Product = {
-  id: number;
-  name: string;
-  brand: string;
-  category: string;
-  price: number;
-  oldPrice?: number;
-  sku: string;
-  description: string;
-  compatibility: string[];
-  stock: number;
-  icon: string;
-};
-
-type CartItem = {
-  product: Product;
-  quantity: number;
-};
-
-const products: Product[] = [
-  {
-    id: 1, name: "فلتر زيت المحرك", brand: "Bosch",
-    category: "فلاتر", price: 350, oldPrice: 420,
-    sku: "FIL-001", description: "فلتر زيت للمحافظة على كفاءة المحرك.",
-    compatibility: ["تويوتا كورولا", "هيونداي إلنترا"],
-    stock: 18, icon: "🛢️"
-  },
-  {
-    id: 2, name: "تيل فرامل أمامي", brand: "Brembo",
-    category: "فرامل", price: 1250,
-    sku: "BRK-002", description: "تيل فرامل عالي الجودة.",
-    compatibility: ["تويوتا كورولا", "كيا سيراتو"],
-    stock: 12, icon: "🛞"
-  },
-  {
-    id: 3, name: "فلتر هواء", brand: "Mann",
-    category: "فلاتر", price: 280,
-    sku: "FIL-003", description: "فلتر هواء لتحسين أداء المحرك.",
-    compatibility: ["نيسان صني", "هيونداي إلنترا"],
-    stock: 25, icon: "🌬️"
-  },
-  {
-    id: 4, name: "بطارية سيارة 70 أمبير", brand: "Varta",
-    category: "كهرباء", price: 3200,
-    sku: "BAT-004", description: "بطارية سيارة للاستخدام اليومي.",
-    compatibility: ["تويوتا كورولا", "كيا سيراتو"],
-    stock: 8, icon: "🔋"
-  },
-  {
-    id: 5, name: "بوجيهات إشعال", brand: "NGK",
-    category: "محرك", price: 650,
-    sku: "ENG-005", description: "بوجيهات لتحسين كفاءة الاشتعال.",
-    compatibility: ["نيسان صني", "هيونداي إلنترا"],
-    stock: 15, icon: "⚙️"
-  },
-  {
-    id: 6, name: "مساعد أمامي", brand: "Monroe",
-    category: "عفشة", price: 1850,
-    sku: "SUS-006", description: "مساعد أمامي لتحسين ثبات السيارة.",
-    compatibility: ["تويوتا كورولا"],
-    stock: 6, icon: "🔧"
-  },
-  {
-    id: 7, name: "فلتر تكييف", brand: "Bosch",
-    category: "فلاتر", price: 320,
-    sku: "FIL-007", description: "فلتر لتنقية هواء المقصورة.",
-    compatibility: ["كيا سيراتو", "نيسان صني"],
-    stock: 20, icon: "❄️"
-  },
-  {
-    id: 8, name: "طقم سيور محرك", brand: "Gates",
-    category: "محرك", price: 980,
-    sku: "ENG-008", description: "طقم سيور للمحرك.",
-    compatibility: ["هيونداي إلنترا", "تويوتا كورولا"],
-    stock: 9, icon: "⚙️"
-  }
-];
-
-const categories = ["الكل", "فلاتر", "فرامل", "محرك", "كهرباء", "عفشة"];
-
-const cars = [
-  "كل السيارات",
-  "تويوتا كورولا",
-  "هيونداي إلنترا",
-  "نيسان صني",
-  "كيا سيراتو"
-];
+import { products } from "./data/products";
+import { vehicles } from "./data/vehicles";
+import type { Product, Car as Vehicle, CartItem } from "./types";
 
 const money = (value: number) =>
   new Intl.NumberFormat("ar-EG").format(value) + " ج.م";
+
+const categories = ["الكل", ...Array.from(
+  new Set(products.map((product) => product.category))
+)];
+
+const cars: Vehicle[] = vehicles;
+
+function carName(car: Vehicle) {
+  return `${car.brand} ${car.model} ${car.year}`;
+}
+
+function productIcon(category: string) {
+  const icons: Record<string, string> = {
+    "الفلاتر": "🛢️",
+    "الفرامل": "🛞",
+    "الكهرباء": "🔋",
+    "التعليق": "🔧",
+    "المحرك": "⚙️"
+  };
+
+  return icons[category] || "🔩";
+}
 
 function App() {
   const [search, setSearch] = useState("");
@@ -104,7 +43,9 @@ function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
-  const [favorites, setFavorites] = useState<number[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [detailsProduct, setDetailsProduct] = useState<Product | null>(null);
+
   const [requestOpen, setRequestOpen] = useState(false);
   const [requestName, setRequestName] = useState("");
   const [requestCar, setRequestCar] = useState("");
@@ -114,51 +55,80 @@ function App() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("autoparts-cart");
-      if (saved) setCart(JSON.parse(saved));
+      const saved = localStorage.getItem("autoparts-cart-v2");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setCart(parsed);
+      }
+
+      const savedFavorites = localStorage.getItem("autoparts-favorites");
+      if (savedFavorites) {
+        const parsed = JSON.parse(savedFavorites);
+        if (Array.isArray(parsed)) setFavorites(parsed);
+      }
     } catch {
       setCart([]);
+      setFavorites([]);
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("autoparts-cart", JSON.stringify(cart));
+    localStorage.setItem("autoparts-cart-v2", JSON.stringify(cart));
   }, [cart]);
 
+  useEffect(() => {
+    localStorage.setItem("autoparts-favorites", JSON.stringify(favorites));
+  }, [favorites]);
+
   const filteredProducts = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
     return products.filter((product) => {
-      const matchesSearch =
-        product.name.includes(search) ||
-        product.brand.toLowerCase().includes(search.toLowerCase()) ||
-        product.sku.toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = [
+        product.name,
+        product.nameEn,
+        product.brand,
+        product.sku,
+        product.oem,
+        product.description
+      ].some((value) => value.toLowerCase().includes(query));
 
       const matchesCategory =
         category === "الكل" || product.category === category;
 
       const matchesCar =
         selectedCar === "كل السيارات" ||
-        product.compatibility.includes(selectedCar);
+        product.compatibleCars.includes(selectedCar);
 
       return matchesSearch && matchesCategory && matchesCar;
     });
   }, [search, category, selectedCar]);
 
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cart.reduce(
+    (sum, item) => sum + item.quantity, 0
+  );
 
   const total = cart.reduce(
     (sum, item) => sum + item.product.price * item.quantity, 0
   );
 
   function addToCart(product: Product) {
+    if (product.stock <= 0) return;
+
     setCart((current) => {
-      const existing = current.find((item) => item.product.id === product.id);
+      const existing = current.find(
+        (item) => item.product.id === product.id
+      );
 
       if (existing) {
         return current.map((item) =>
           item.product.id === product.id
             ? {
                 ...item,
-                quantity: Math.min(item.quantity + 1, product.stock)
+                quantity: Math.min(
+                  item.quantity + 1,
+                  product.stock
+                )
               }
             : item
         );
@@ -166,10 +136,12 @@ function App() {
 
       return [...current, { product, quantity: 1 }];
     });
+
     setCartOpen(true);
+    setDetailsProduct(null);
   }
 
-  function changeQuantity(id: number, amount: number) {
+  function changeQuantity(id: string, amount: number) {
     setCart((current) =>
       current
         .map((item) =>
@@ -187,13 +159,13 @@ function App() {
     );
   }
 
-  function removeFromCart(id: number) {
+  function removeFromCart(id: string) {
     setCart((current) =>
       current.filter((item) => item.product.id !== id)
     );
   }
 
-  function toggleFavorite(id: number) {
+  function toggleFavorite(id: string) {
     setFavorites((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
@@ -201,7 +173,7 @@ function App() {
     );
   }
 
-  function submitRequest(event: React.FormEvent<HTMLFormElement>) {
+  function submitRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const message = [
@@ -217,6 +189,12 @@ function App() {
 
     window.open(whatsappUrl, "_blank");
     setRequestSent(true);
+  }
+
+  function resetFilters() {
+    setSearch("");
+    setCategory("الكل");
+    setSelectedCar("كل السيارات");
   }
 
   return (
@@ -333,7 +311,7 @@ function App() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="ابحث باسم القطعة أو العلامة التجارية أو SKU..."
+                placeholder="ابحث بالاسم أو الماركة أو SKU أو OEM..."
               />
               {search && (
                 <button onClick={() => setSearch("")} aria-label="مسح البحث">
@@ -348,7 +326,12 @@ function App() {
                 value={selectedCar}
                 onChange={(event) => setSelectedCar(event.target.value)}
               >
-                {cars.map((car) => <option key={car}>{car}</option>)}
+                <option value="كل السيارات">كل السيارات</option>
+                {cars.map((car) => (
+                  <option key={car.id} value={car.id}>
+                    {carName(car)} {car.engine ? `- ${car.engine}` : ""}
+                  </option>
+                ))}
               </select>
               <ChevronDown size={16} />
             </label>
@@ -369,70 +352,97 @@ function App() {
           {selectedCar !== "كل السيارات" && (
             <div className="compatibility-note">
               <Car size={17} />
-              المنتجات المعروضة متوافقة حسب بيانات تجريبية مع {selectedCar}.
-              يجب تأكيد رقم القطعة قبل الشراء.
+              النتائج حسب بيانات التوافق المسجلة للسيارة المختارة.
+              يجب التأكد من رقم القطعة قبل الشراء.
             </div>
           )}
 
           <div className="products-grid">
-            {filteredProducts.map((product) => (
-              <article className="product-card" key={product.id}>
-                <div className="product-image">
-                  <span className="product-emoji">{product.icon}</span>
-                  {product.oldPrice && <span className="discount">عرض</span>}
-                  <button
-                    className={favorites.includes(product.id)
-                      ? "favorite active" : "favorite"}
-                    onClick={() => toggleFavorite(product.id)}
-                    aria-label="إضافة للمفضلة"
-                  >
-                    <Heart size={19} fill={
-                      favorites.includes(product.id) ? "currentColor" : "none"
-                    } />
-                  </button>
-                </div>
+            {filteredProducts.map((product) => {
+              const compatibleVehicles = cars.filter((car) =>
+                product.compatibleCars.includes(car.id)
+              );
 
-                <div className="product-info">
-                  <div className="product-meta">
-                    <span>{product.brand}</span>
-                    <span>SKU: {product.sku}</span>
-                  </div>
-
-                  <h3>{product.name}</h3>
-                  <p>{product.description}</p>
-
-                  <div className="compatibility">
-                    <Car size={15} />
-                    <span>
-                      {product.compatibility.slice(0, 2).join("، ")}
+              return (
+                <article className="product-card" key={product.id}>
+                  <div className="product-image">
+                    <span className="product-emoji">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} />
+                      ) : productIcon(product.category)}
                     </span>
-                  </div>
 
-                  <div className="stock">
-                    <span className={product.stock > 5 ? "in-stock" : "low-stock"}>
-                      {product.stock > 5 ? "متوفر" : "كمية محدودة"}
-                    </span>
-                    <span>المخزون: {product.stock}</span>
-                  </div>
+                    {product.oldPrice && (
+                      <span className="discount">عرض</span>
+                    )}
 
-                  <div className="product-footer">
-                    <div className="price">
-                      <strong>{money(product.price)}</strong>
-                      {product.oldPrice && (
-                        <del>{money(product.oldPrice)}</del>
-                      )}
-                    </div>
                     <button
-                      className="add-button"
-                      onClick={() => addToCart(product)}
-                      disabled={product.stock === 0}
+                      className={favorites.includes(product.id)
+                        ? "favorite active" : "favorite"}
+                      onClick={() => toggleFavorite(product.id)}
+                      aria-label="إضافة للمفضلة"
                     >
-                      <Plus size={18} /> أضف للسلة
+                      <Heart size={19} fill={
+                        favorites.includes(product.id)
+                          ? "currentColor" : "none"
+                      } />
                     </button>
                   </div>
-                </div>
-              </article>
-            ))}
+
+                  <div className="product-info">
+                    <div className="product-meta">
+                      <span>{product.brand}</span>
+                      <span>SKU: {product.sku}</span>
+                    </div>
+
+                    <h3>{product.name}</h3>
+                    <p>{product.description}</p>
+
+                    <div className="compatibility">
+                      <Car size={15} />
+                      <span>
+                        {compatibleVehicles.length
+                          ? compatibleVehicles.map(carName).join("، ")
+                          : "لم تحدد سيارة متوافقة"}
+                      </span>
+                    </div>
+
+                    <div className="stock">
+                      <span className={product.stock > 5
+                        ? "in-stock" : "low-stock"}>
+                        {product.stock > 5 ? "متوفر" :
+                          product.stock > 0 ? "كمية محدودة" : "غير متوفر"}
+                      </span>
+                      <span>المخزون: {product.stock}</span>
+                    </div>
+
+                    <div className="product-footer">
+                      <div className="price">
+                        <strong>{money(product.price)}</strong>
+                        {product.oldPrice && (
+                          <del>{money(product.oldPrice)}</del>
+                        )}
+                      </div>
+
+                      <button
+                        className="add-button"
+                        onClick={() => addToCart(product)}
+                        disabled={product.stock === 0}
+                      >
+                        <Plus size={18} /> أضف للسلة
+                      </button>
+                    </div>
+
+                    <button
+                      className="details-button"
+                      onClick={() => setDetailsProduct(product)}
+                    >
+                      <Eye size={16} /> عرض تفاصيل القطعة
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
 
           {filteredProducts.length === 0 && (
@@ -440,11 +450,7 @@ function App() {
               <Search size={38} />
               <h3>لم نعثر على منتجات</h3>
               <p>جرب تغيير كلمات البحث أو اختيار قسم آخر.</p>
-              <button onClick={() => {
-                setSearch("");
-                setCategory("الكل");
-                setSelectedCar("كل السيارات");
-              }}>
+              <button onClick={resetFilters}>
                 عرض كل المنتجات
               </button>
             </div>
@@ -476,9 +482,104 @@ function App() {
         <span>© 2026 AutoParts Hub - جميع الحقوق محفوظة</span>
       </footer>
 
+      {detailsProduct && (
+        <div className="overlay" onClick={() => setDetailsProduct(null)}>
+          <div
+            className="request-modal details-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="drawer-heading">
+              <div><Package /><h2>تفاصيل القطعة</h2></div>
+              <button
+                onClick={() => setDetailsProduct(null)}
+                aria-label="إغلاق"
+              >
+                <X />
+              </button>
+            </div>
+
+            <div className="details-product-icon">
+              {detailsProduct.image ? (
+                <img src={detailsProduct.image} alt={detailsProduct.name} />
+              ) : productIcon(detailsProduct.category)}
+            </div>
+
+            <h3 className="details-product-name">
+              {detailsProduct.name}
+            </h3>
+
+            <div className="details-price">
+              {money(detailsProduct.price)}
+            </div>
+
+            <div className="details-list">
+              <div>
+                <Tag size={17} />
+                <span>الماركة</span>
+                <strong>{detailsProduct.brand}</strong>
+              </div>
+              <div>
+                <Package size={17} />
+                <span>التصنيف</span>
+                <strong>{detailsProduct.category}</strong>
+              </div>
+              <div>
+                <Hash size={17} />
+                <span>SKU</span>
+                <strong>{detailsProduct.sku}</strong>
+              </div>
+              <div>
+                <Hash size={17} />
+                <span>رقم OEM</span>
+                <strong>{detailsProduct.oem}</strong>
+              </div>
+              <div>
+                <Package size={17} />
+                <span>المخزون</span>
+                <strong>{detailsProduct.stock} قطعة</strong>
+              </div>
+            </div>
+
+            <div className="details-description">
+              <b>الوصف</b>
+              <p>{detailsProduct.description}</p>
+            </div>
+
+            <div className="details-description">
+              <b>السيارات المسجل توافقها</b>
+              <p>
+                {cars
+                  .filter((car) =>
+                    detailsProduct.compatibleCars.includes(car.id)
+                  )
+                  .map(carName)
+                  .join("، ") || "لا توجد بيانات توافق مسجلة."}
+              </p>
+            </div>
+
+            <div className="details-warning">
+              <AlertCircle size={18} />
+              بيانات التوافق المعروضة تجريبية، ويجب التأكد من رقم OEM
+              ومطابقته مع السيارة قبل الشراء.
+            </div>
+
+            <button
+              className="checkout-button"
+              disabled={detailsProduct.stock === 0}
+              onClick={() => addToCart(detailsProduct)}
+            >
+              <ShoppingCart size={18} /> أضف القطعة للسلة
+            </button>
+          </div>
+        </div>
+      )}
+
       {cartOpen && (
         <div className="overlay" onClick={() => setCartOpen(false)}>
-          <aside className="cart-drawer" onClick={(event) => event.stopPropagation()}>
+          <aside
+            className="cart-drawer"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="drawer-heading">
               <div><ShoppingCart /><h2>سلة المشتريات</h2></div>
               <button onClick={() => setCartOpen(false)} aria-label="إغلاق">
@@ -491,28 +592,45 @@ function App() {
                 <ShoppingCart size={55} />
                 <h3>السلة فارغة</h3>
                 <p>أضيفي المنتجات التي تحتاجينها.</p>
-                <button onClick={() => setCartOpen(false)}>متابعة التسوق</button>
+                <button onClick={() => setCartOpen(false)}>
+                  متابعة التسوق
+                </button>
               </div>
             ) : (
               <>
                 <div className="cart-items">
                   {cart.map((item) => (
                     <div className="cart-item" key={item.product.id}>
-                      <div className="cart-item-icon">{item.product.icon}</div>
+                      <div className="cart-item-icon">
+                        {productIcon(item.product.category)}
+                      </div>
+
                       <div className="cart-item-details">
                         <h3>{item.product.name}</h3>
                         <strong>{money(item.product.price)}</strong>
+
                         <div className="quantity-controls">
-                          <button onClick={() => changeQuantity(item.product.id, -1)}>
+                          <button
+                            onClick={() =>
+                              changeQuantity(item.product.id, -1)
+                            }
+                          >
                             <Minus size={15} />
                           </button>
+
                           <span>{item.quantity}</span>
+
                           <button
-                            onClick={() => changeQuantity(item.product.id, 1)}
-                            disabled={item.quantity >= item.product.stock}
+                            onClick={() =>
+                              changeQuantity(item.product.id, 1)
+                            }
+                            disabled={
+                              item.quantity >= item.product.stock
+                            }
                           >
                             <Plus size={15} />
                           </button>
+
                           <button
                             className="remove-button"
                             onClick={() => removeFromCart(item.product.id)}
@@ -527,10 +645,16 @@ function App() {
 
                 <div className="cart-summary">
                   <div><span>عدد القطع</span><b>{cartCount}</b></div>
-                  <div className="total-row"><span>الإجمالي</span><strong>{money(total)}</strong></div>
+                  <div className="total-row">
+                    <span>الإجمالي</span>
+                    <strong>{money(total)}</strong>
+                  </div>
                   <p>لا يشمل الإجمالي تكلفة الشحن.</p>
+
                   <button className="checkout-button" onClick={() => {
-                    alert("هذه نسخة تجريبية. سيتم إضافة إتمام الطلب والدفع في المرحلة التالية.");
+                    alert(
+                      "هذه نسخة تجريبية. سيتم إضافة إتمام الطلب والدفع في المرحلة التالية."
+                    );
                   }}>
                     متابعة إتمام الطلب <ArrowLeft size={18} />
                   </button>
@@ -543,10 +667,16 @@ function App() {
 
       {requestOpen && (
         <div className="overlay" onClick={() => setRequestOpen(false)}>
-          <div className="request-modal" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="request-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
             <div className="drawer-heading">
               <div><Wrench /><h2>طلب قطعة غير متوفرة</h2></div>
-              <button onClick={() => setRequestOpen(false)} aria-label="إغلاق">
+              <button
+                onClick={() => setRequestOpen(false)}
+                aria-label="إغلاق"
+              >
                 <X />
               </button>
             </div>
@@ -555,30 +685,45 @@ function App() {
               <div className="success-message">
                 <CircleCheck size={48} />
                 <h3>تم تجهيز طلبك</h3>
-                <p>إذا لم تفتح رسالة واتساب، يمكنك التواصل معنا مباشرة.</p>
+                <p>
+                  تم فتح رسالة واتساب إن أمكن. هذا لا يعني أن الطلب
+                  وصل إلى متجر محدد.
+                </p>
                 <button onClick={() => setRequestOpen(false)}>إغلاق</button>
               </div>
             ) : (
               <form onSubmit={submitRequest}>
                 <label>اسم القطعة المطلوبة *</label>
-                <input required value={requestName}
+                <input
+                  required
+                  value={requestName}
                   onChange={(event) => setRequestName(event.target.value)}
-                  placeholder="مثال: طلمبة بنزين" />
+                  placeholder="مثال: طلمبة بنزين"
+                />
 
                 <label>نوع السيارة والموديل *</label>
-                <input required value={requestCar}
+                <input
+                  required
+                  value={requestCar}
                   onChange={(event) => setRequestCar(event.target.value)}
-                  placeholder="مثال: تويوتا كورولا 2020" />
+                  placeholder="مثال: تويوتا كورولا 2020"
+                />
 
                 <label>رقم الهاتف *</label>
-                <input required type="tel" value={requestPhone}
+                <input
+                  required
+                  type="tel"
+                  value={requestPhone}
                   onChange={(event) => setRequestPhone(event.target.value)}
-                  placeholder="رقم التواصل" />
+                  placeholder="رقم التواصل"
+                />
 
                 <label>تفاصيل إضافية</label>
-                <textarea value={requestMessage}
+                <textarea
+                  value={requestMessage}
                   onChange={(event) => setRequestMessage(event.target.value)}
-                  placeholder="رقم القطعة أو تفاصيل المحرك أو أي معلومات أخرى..." />
+                  placeholder="رقم القطعة أو تفاصيل المحرك أو أي معلومات أخرى..."
+                />
 
                 <button className="checkout-button" type="submit">
                   إرسال الطلب عبر واتساب <Send size={17} />
